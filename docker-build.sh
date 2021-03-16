@@ -110,6 +110,7 @@ prepare_extra_amd64() {
     pushd intel-vaapi-driver
     ./autogen.sh
     ./configure LIBVA_DRIVERS_PATH=${TARGET_DIR}/lib/dri
+    echo "dav1d/*dav1d* /usr/lib/jellyfin-ffmpeg/lib" >> ${SOURCE_DIR}/debian/jellyfin-ffmpeg.install
     make -j$(nproc) && make install
     mkdir -p ${SOURCE_DIR}/intel/dri
     cp ${TARGET_DIR}/lib/dri/i965*.so ${SOURCE_DIR}/intel/dri
@@ -241,6 +242,19 @@ EOF
     pushd cross-gcc-packages-amd64/cross-gcc-${GCC_VER}-arm64
     ln -fs /usr/share/zoneinfo/America/Toronto /etc/localtime
     yes | apt-get install -y -o APT::Immediate-Configure=0 gcc-${GCC_VER}-source gcc-${GCC_VER}-aarch64-linux-gnu g++-${GCC_VER}-aarch64-linux-gnu libstdc++6-arm64-cross binutils-aarch64-linux-gnu bison flex libtool gdb sharutils netbase libmpc-dev libmpfr-dev libgmp-dev systemtap-sdt-dev autogen expect chrpath zlib1g-dev zip libc6-dev:arm64 linux-libc-dev:arm64 libgcc1:arm64 libcurl4-openssl-dev:arm64 libfontconfig1-dev:arm64 libfreetype6-dev:arm64 liblttng-ust0:arm64 libstdc++6:arm64
+    popd
+
+    # Install nvmpi
+    pushd ${SOURCE_DIR}
+    # Copy libs
+    cp -a nvmpi/build/*.so* /usr/lib
+    # Copy headers
+    cp -a nvmpi/*.h /usr/include
+    # Copy packge config
+    cp -a nvmpi/build/nvmpi.pc /usr/lib/aarch64-linux-gnu/pkgconfig/
+    # Copy Linux for Tegra dependencies
+    cp -a nvmpi/depends/lib/* /usr/lib/aarch64-linux-gnu/
+    cp -a nvmpi/depends/nvidia-tegra.conf /etc/ld.so.conf.d/
     popd
 
     # Fetch RasPi headers to build MMAL and OMX-RPI support
