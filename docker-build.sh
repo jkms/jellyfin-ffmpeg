@@ -110,7 +110,6 @@ prepare_extra_amd64() {
     pushd intel-vaapi-driver
     ./autogen.sh
     ./configure LIBVA_DRIVERS_PATH=${TARGET_DIR}/lib/dri
-    echo "dav1d/*dav1d* /usr/lib/jellyfin-ffmpeg/lib" >> ${SOURCE_DIR}/debian/jellyfin-ffmpeg.install
     make -j$(nproc) && make install
     mkdir -p ${SOURCE_DIR}/intel/dri
     cp ${TARGET_DIR}/lib/dri/i965*.so ${SOURCE_DIR}/intel/dri
