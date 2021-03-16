@@ -54,6 +54,7 @@ CONFIG_ARM := ${CONFIG_ARM_COMMON} \
 	--cross-prefix=/usr/bin/arm-linux-gnueabihf- \
 
 CONFIG_ARM64 := ${CONFIG_ARM_COMMON} \
+	--enable-nvmpi \
 	--arch=arm64 \
 	--cross-prefix=/usr/bin/aarch64-linux-gnu- \
 
