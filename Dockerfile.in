@@ -1,3 +1,46 @@
+FROM nvcr.io/nvidia/l4t-base:r32.5.0 AS jetson-builder
+RUN apt-get update \
+ && yes | apt-get install -y gnupg ca-certificates
+# https://forums.balena.io/t/getting-linux-for-tegra-into-a-container-on-balena-os/179421/18
+# nvidia-l4t-core is a dependency for the rest
+# of the packages, and is designed to be installed directly
+# on the target device. This because it parses /proc/device-tree
+# in the deb's .preinst script. Looks like we can bypass it though:
+RUN \
+    echo "deb https://repo.download.nvidia.com/jetson/common r32.5 main" >> /etc/apt/sources.list && \
+    echo "deb https://repo.download.nvidia.com/jetson/t194 r32.5 main" >> /etc/apt/sources.list && \
+    apt-key adv --fetch-key http://repo.download.nvidia.com/jetson/jetson-ota-public.asc && \
+    mkdir -p /opt/nvidia/l4t-packages/ && \
+    touch /opt/nvidia/l4t-packages/.nv-l4t-disable-boot-fw-update-in-preinstall && \
+    apt-get update && \
+    apt-get install --yes -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends nvidia-l4t-core
+
+# Installed required libraries to build jetson-ffmpeg
+RUN \
+    apt-get install --yes --no-install-recommends \
+    nvidia-l4t-multimedia-utils \
+    nvidia-l4t-multimedia \
+    nvidia-l4t-jetson-multimedia-api
+RUN yes | apt-get install -y git build-essential cmake
+
+# Build jetson-ffmpeg and copy the necessary librariers
+RUN \
+    # Install jetson-ffmpeg
+    git clone https://github.com/jocover/jetson-ffmpeg.git \
+    && cd jetson-ffmpeg \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+    && make -j$(nproc) \
+    && cd .. \
+    && mkdir -p depends/lib \
+    && cp -a /usr/lib/aarch64-linux-gnu/libGLdispatch.so* depends/lib \
+    && cp -a /usr/lib/aarch64-linux-gnu/libv4l2.so* depends/lib \
+    && cp -a /usr/lib/aarch64-linux-gnu/libEGL.so*  depends/lib \
+    && cp -a /usr/lib/aarch64-linux-gnu/tegra depends/lib/tegra \
+    && cp -a /etc/ld.so.conf.d/nvidia-tegra.conf depends/ \
+    && cd ..
+
 FROM DISTRO
 # Docker build arguments
 ARG SOURCE_DIR=/ffmpeg
@@ -29,5 +72,6 @@ RUN ln -sf ${SOURCE_DIR}/docker-build.sh /docker-build.sh
 VOLUME ${ARTIFACT_DIR}/
 
 COPY . ${SOURCE_DIR}/
+COPY --from=jetson-builder /jetson-ffmpeg ${SOURCE_DIR}/nvmpi
 
 ENTRYPOINT ["/docker-build.sh"]
